@@ -23,7 +23,7 @@ class Controller
 		var index = this.view.get_number_clicked_field(event);
 		this.model.set_bombs(index);
 		this.model.set_values();
-		this.view.render_open_field(index, this.model.get_values(), this.model.get_count_col(), this.model.get_count_row());
+		this.open_field(index);
 		
 		this.view.show_prev_results(this.model.get_count_bomb());
 		this.view.create_timer();
@@ -36,15 +36,96 @@ class Controller
 		this.view.set_field_right_click_function(this.right_click_field_function);
     }
 	
+	open_field(index) {
+		var mas = this.model.get_values();
+		var count_col = this.model.get_count_col();
+		var count_row = this.model.get_count_row();
+		
+		// костыль для предотвращения ситуации, когда в главный массив неизвестно откуда добавляются два элемента: "-1" и "NaN"
+		if (mas.length > count_col * count_row) this.model.fields_values.splice(count_col * count_row, 2);
+		
+		switch (mas[index]) {
+			case -1:
+				this.view.render_open_field(index, "url(assets/img/bomb2_field.png)");
+				if (!this.view.check_flag_field(index)) this.view.defeat(mas, index);
+				break;
+			case 0:
+				this.view.render_open_field(index, "url(assets/img/empty_field.png)");
+				
+				if ((index + 1) % count_col != 0 && this.view.check_closed_field(index + 1)) this.open_field(index + 1);
+				if (index % count_col != 0 && this.view.check_closed_field(index - 1)) this.open_field(index - 1);
+				
+				if (index < (count_row - 1) * count_col) {
+					if (this.view.check_closed_field(index + count_col)) this.open_field(index + count_col);
+					if ((index + 1) % count_col != 0 && this.view.check_closed_field(index + count_col + 1)) this.open_field(index + count_col + 1);
+					if (index % count_col != 0 && this.view.check_closed_field(index + count_col - 1)) this.open_field(index + count_col - 1);
+				}
+				
+				if (index >= count_col) {
+					if (this.view.check_closed_field(index - count_col)) this.open_field(index - count_col);
+					if ((index + 1) % count_col != 0 && this.view.check_closed_field(index - count_col + 1)) this.open_field(index - count_col + 1);
+					if (index % count_col != 0 && this.view.check_closed_field(index - count_col - 1)) this.open_field(index - count_col - 1);
+				}
+				break;
+			case 1:
+				this.view.render_open_field(index, "1,blue");
+				break;
+			case 2:
+				this.view.render_open_field(index, "2,green");
+				break;
+			case 3:
+				this.view.render_open_field(index, "3,red");
+				break;
+			case 4:
+				this.view.render_open_field(index, "4,#00008B");
+				break; 
+			case 5:
+				this.view.render_open_field(index, "5,#8B0000");
+				break;
+			case 6:
+				this.view.render_open_field(index, "6,#00FFFF");
+				break;
+			case 7:
+				this.view.render_open_field(index, "7,#00FFFF");
+				break;
+			case 8:
+				this.view.render_open_field(index, "8,#00FFFF");
+				break;
+		}
+	}
+	
+	open_neighboring_fields(index) {
+		var count_col = this.model.get_count_col();
+		var count_row = this.model.get_count_row();
+		
+		if ((index + 1) % count_col != 0) this.open_field(index + 1);
+		if (index % count_col != 0) this.open_field(index - 1);
+		
+		if (index < (count_row - 1) * count_col) { 
+			this.open_field(index + count_col);
+			if ((index + 1) % count_col != 0) 
+				this.open_field(index + count_col + 1); 
+			if (index % count_col != 0) 
+				this.open_field(index + count_col - 1); 
+		}
+		if (index >= count_col) { 
+			this.open_field(index - count_col);
+			if ((index + 1) % count_col != 0) 
+				this.open_field(index - count_col + 1);
+			if (index % count_col != 0) 
+				this.open_field(index - count_col - 1); 
+		}
+	}
+	
 	click_field(event) { 
 		var index = this.view.get_number_clicked_field(event);
-		this.view.render_open_field(index, this.model.get_values(), this.model.get_count_col(), this.model.get_count_row());
+		this.open_field(index);
 		this.view.check_victory(this.model.get_values(), this.model.get_count_bomb()); 
     }
 	
 	double_click_field(event) {
 		var index = this.view.get_number_clicked_field(event);
-		this.view.render_open_neighboring_fields(index, this.model.get_values(), this.model.get_count_col(), this.model.get_count_row());
+		this.open_neighboring_fields(index);
 		this.view.check_victory(this.model.get_values(), this.model.get_count_bomb());
     }
 	
