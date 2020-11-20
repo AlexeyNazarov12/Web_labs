@@ -7,153 +7,127 @@ class View
 		document.body.oncontextmenu = function (e) { return false; }; //не вызывать браузерное контекстное меню на странице
 		
 		this.timer_id = null;
-		
-		this.size_field = 50;
-		this.size_between_fields = 5;
-		
-		this.count_col = 0;
-		this.count_row = 0;
-		
-		this.map_view_fields = [];	//0 - закрытое поле
-									//1 - открытое поле
-									//2 - значок флажка
-									//3 - значок вопроса
 	}
 	
-	render(count_col, count_row) {     
-		this.count_col = count_col;
-		this.count_row = count_row;
+	render(count_col, count_row) {        
+        this.tab_fields.innerHTML = "";
 		
-		var size_field = this.size_field;
-		var size_between_fields = this.size_between_fields;
+		var inner_table = "";
 		
-		for (let i = 0; i < count_row; i++) {
-			this.map_view_fields[i] = [];
-			for (let j = 0; j < count_col; j++) this.map_view_fields[i][j] = 0;
-		}
-			
-		this.tab_fields.innerHTML = "";
-		
-		var canvas_elem = document.createElement("canvas");
-		canvas_elem.id = "canvas_id";
-
-		canvas_elem.height = (size_field * count_col + size_between_fields * count_col - size_between_fields).toString();
-		canvas_elem.width = (size_field * count_row + size_between_fields * count_row - size_between_fields).toString();
-		
-		this.tab_fields.appendChild(canvas_elem);
-		
-		var ctx = canvas_elem.getContext("2d");
-		
-		var pic = new Image();
-		pic.src = "assets/img/closed_field.png";
-		
-		pic.onload = function() {
-			for (let i = 0; i < count_row; i++) {
-				for (let j = 0; j < count_col; j++) {
-					ctx.drawImage(pic,
-						i < 1 ? (size_field * i) : (size_field * i + size_between_fields * i), 
-						j < 1 ? (size_field * j) : (size_field * j + size_between_fields * j), 
-					size_field, size_field);
-				}
+        for (let i = 0; i < count_row; i++) {
+			inner_table += "<tr>";
+			for (let j = 0; j < count_col; j++) {
+				inner_table += "<td>";
+				
+				var block = document.createElement("div");
+				block.className = "field";
+				block.id = (j + count_col * i).toString();
+				
+				var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+				svg.setAttribute('width', '50');
+				svg.setAttribute('height', '50');	
+				
+				svg.appendChild(this.render_svg_img('100%', 'assets/img/closed_field.png'));
+				
+				block.appendChild(svg);
+				
+				inner_table += block.outerHTML;
+				inner_table += "</td>";
 			}
-		}
+			inner_table += "</tr>";
+        }
 		
+		this.tab_fields.innerHTML = inner_table;
 		this.tab_fields.style.display = "block";
     }
 	
+	render_svg_text(x, y, style, txt) {
+		var svg_text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+		
+		svg_text.setAttribute('style', style); //'font-size: 35px; font-weight: bold; stroke: blue;'
+		svg_text.setAttribute('x', x); 		   //16
+		svg_text.setAttribute('y', y); 		   //36
+		svg_text.textContent = txt;
+		
+		return svg_text;
+	}
+	
+	render_svg_img(scale, url) {
+		var svg_img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+		
+		svg_img.setAttribute('xlink:href', url); //'assets/img/closed_field.png'
+		svg_img.setAttribute('width', scale);
+		svg_img.setAttribute('height', scale);
+		
+		return svg_img;
+	}
+	
 	render_open_field(id_field, text) {
-		var str_id_field = id_field.toString();
+		var svg_elem = document.getElementById(id_field.toString()).childNodes[0];
+		var svg_img = svg_elem.getElementsByTagName('image');
 		
-		var matrix_x = this.get_matrix_coord_x(id_field);
-		var matrix_y = this.get_matrix_coord_y(id_field);
+		var flag_path_elems = svg_elem.getElementsByTagName('path');
 		
-		if (this.map_view_fields[matrix_y][matrix_x] == 0)
-			this.map_view_fields[matrix_y][matrix_x] = 1;
-		else return;
+		if (svg_img[0].getAttributeNS('http://www.w3.org/1999/xlink', 'href') != "assets/img/closed_field.png" || 
+			flag_path_elems.length > 0) return;
 		
-		//рисование
-		
-		var holst_x = this.get_holst_coord(matrix_x);
-		var holst_y = this.get_holst_coord(matrix_y);
-		
-		var ctx = document.getElementById("canvas_id").getContext("2d");
-		ctx.font = "bold 35px sans-serif";
-		
-		var pic = new Image();
-		pic.src = text.indexOf(',') != -1 ? "assets/img/empty_field.png" : text.substr(4, text.length - 5);
-		
-		pic.onload = (function() {
-			ctx.drawImage(pic, holst_x, holst_y, this.size_field, this.size_field); 
+		if (text.indexOf(',') != -1) {
+			var mas = text.split(',');
 			
-			if (text.indexOf(',') != -1) {
-				var mas = text.split(','); //mas[0] - цифра, mas[1] - цвет
-				ctx.fillStyle = mas[1];
-				ctx.fillText(mas[0], holst_x + this.size_field / 3, holst_y + this.size_field / 1.4);
-			} 
-		}).bind(this);
+			svg_img[0].setAttribute('xlink:href', 'assets/img/empty_field.png');
+			svg_elem.appendChild(this.render_svg_text('16', '36', 'font-size: 35px; font-weight: bold; stroke: ' + mas[1], mas[0])); 
+		} else {
+			svg_img[0].setAttribute('xlink:href', text.substr(4, text.length - 5));
+		}
+	}
+	
+	set_block_properties(block, text, color) {
+		block.innerHTML = text;
+		block.style.color = color;
+		block.style.fontSize = "45px";
+		block.style.fontWeight = "900";
 	}
 	
 	render_update_closed_field(id_field) {
-		var matrix_x = this.get_matrix_coord_x(id_field);
-		var matrix_y = this.get_matrix_coord_y(id_field);
+		var svg_elem = document.getElementById(id_field.toString()).childNodes[0];
+		var svg_img = svg_elem.getElementsByTagName('image');
 		
-		var holst_x = this.get_holst_coord(matrix_x);
-		var holst_y = this.get_holst_coord(matrix_y);
-				
-		var ctx = document.getElementById("canvas_id").getContext("2d");
-		var pic = new Image();
+		var flag_path_elems = svg_elem.getElementsByTagName('path');
 		
-		if (this.map_view_fields[matrix_y][matrix_x] == 0) {
-			pic.src = "assets/img/flag_field.jpg";
+		//данные для рисования флажка (атрибут d элемента path)
+		var flag_paths = [ 'M 10 15 L 27 10 V 20 Z', 
+						   'M 23 15 V 30 H 15 V 34 H 10 V 38 H 40 V 34 H 35 V 30 H 27 V 10 Z' ];
+		
+		if (svg_img[0].getAttributeNS('http://www.w3.org/1999/xlink', 'href') == 'assets/img/closed_field.png' &&
+			flag_path_elems.length == 0) {
 			
-			pic.onload = (function() {
-				ctx.drawImage(pic, holst_x, holst_y, this.size_field, this.size_field);
-			}).bind(this);
+			//создание двух частей флажка с использованием данных из массива 
+			var path_elem1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+			var path_elem2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 			
-			this.map_view_fields[matrix_y][matrix_x] = 2;
+			path_elem1.setAttribute('d', flag_paths[0]);
+			path_elem1.setAttribute('style', 'fill: red;');
+			
+			path_elem2.setAttribute('d', flag_paths[1]);
+			path_elem2.setAttribute('style', 'fill: black;');
+			
+			//сохранение созданных элементов в svg
+			svg_elem.appendChild(path_elem2);
+			svg_elem.appendChild(path_elem1);
+			
 			this.count_bombs_decrement();
 		}
-		else if (this.map_view_fields[matrix_y][matrix_x] == 2) { 
-			pic.src = "assets/img/question_field.png";
+		else if (svg_img[0].getAttributeNS('http://www.w3.org/1999/xlink', 'href') == 'assets/img/closed_field.png' && 
+				flag_path_elems.length != 0) {
+				 
+			svg_img[0].setAttribute('xlink:href', 'assets/img/question_field.png');
 			
-			pic.onload = (function() {
-				ctx.drawImage(pic, holst_x, holst_y, this.size_field, this.size_field);
-			}).bind(this);
+			while (flag_path_elems.length > 0) svg_elem.removeChild(flag_path_elems[0]);
 			
-			this.map_view_fields[matrix_y][matrix_x] = 3;
 			this.count_bombs_increment(); 
 		}
-		else if (this.map_view_fields[matrix_y][matrix_x] == 3) {
-			pic.src = "assets/img/closed_field.png";
-			
-			pic.onload = (function() {
-				ctx.drawImage(pic, holst_x, holst_y, this.size_field, this.size_field);
-			}).bind(this);
-			
-			this.map_view_fields[matrix_y][matrix_x] = 0;
-		}
-	}
-	
-	get_matrix_coord_x(id_field) {
-		var num_col_field = id_field % this.count_col; 
-		return num_col_field;
-	}
-	
-	get_matrix_coord_y(id_field) {
-		var num_row_field = 0;
-		
-		var str_id_field = id_field.toString();
-		if (str_id_field.length > 1) num_row_field = parseInt(str_id_field.substr(0, str_id_field.length - 1));
-		
-		return num_row_field;
-	}
-	
-	get_holst_coord(matrix_coord) {
-		var holst_coord = 
-			matrix_coord == 0 
-				? this.size_field * matrix_coord
-				: this.size_field * matrix_coord + this.size_between_fields * matrix_coord;
-		return holst_coord;
+		else if (svg_img[0].getAttributeNS('http://www.w3.org/1999/xlink', 'href') == 'assets/img/question_field.png')
+			svg_img[0].setAttribute('xlink:href', 'assets/img/closed_field.png');
 	}
 	
 	count_bombs_increment() {
@@ -184,35 +158,42 @@ class View
 	kill_timer() {
 		clearTimeout(this.timer_id);
 	}
-
+	
 	check_closed_field(index) {
-		var matrix_x = this.get_matrix_coord_x(index);
-		var matrix_y = this.get_matrix_coord_y(index);
+		var svg_elem = document.getElementById(index.toString()).childNodes[0];
+		var svg_img = svg_elem.getElementsByTagName('image');
 		
-		if (this.map_view_fields[matrix_y][matrix_x] == 0)
+		if (svg_img[0].getAttributeNS('http://www.w3.org/1999/xlink', 'href') == "assets/img/closed_field.png")
 			return true;
 		else
 			return false;
 	}
 	
 	check_flag_field(index) {
-		var matrix_x = this.get_matrix_coord_x(index);
-		var matrix_y = this.get_matrix_coord_y(index);
+		var svg_elem = document.getElementById(index.toString()).childNodes[0];
+		var svg_img = svg_elem.getElementsByTagName('image');
+
+		var flag_path_elems = svg_elem.getElementsByTagName('path');
 		
-		if (this.map_view_fields[matrix_y][matrix_x] == 2)
+		if (svg_img[0].getAttributeNS('http://www.w3.org/1999/xlink', 'href') == "assets/img/closed_field.png" &&
+			flag_path_elems.length > 0)
 			return true;
 		else
 			return false;
 	}
 	
 	check_victory(fields_values, count_bombs) {
-		var count_find_bombs = 0;
+		var num = 0;
 		
-		for (let i = 0; i < this.count_row; i++)
-			for (let j = 0; j < this.count_col; j++)
-				if (this.map_view_fields[i][j] == 0 || this.map_view_fields[i][j] == 2) count_find_bombs++;
-			
-		if (count_find_bombs == count_bombs) this.victory(fields_values);
+		for (let i = 0; i < fields_values.length; i++) {
+			var svg_elem = document.getElementById(i.toString()).childNodes[0];
+			var svg_img = svg_elem.getElementsByTagName('image');
+		
+			if (svg_img[0].getAttributeNS('http://www.w3.org/1999/xlink', 'href') == 'assets/img/closed_field.png') 
+				num++;
+		}
+		
+		if (num == count_bombs) this.victory(fields_values);
 	}
 	
 	victory(fields_values) {
@@ -221,25 +202,17 @@ class View
 		elem.style.display = "block";
 		elem.style.color = "green";
 		
-		var ctx = document.getElementById("canvas_id").getContext("2d");
-		var pic = new Image();
-		pic.src = "assets/img/bomb1_field.png";
-		
-		var size_field = this.size_field;
-		
-		pic.onload = (function() {
-			for (let i = 0; i < fields_values.length; i++) 
-				if (fields_values[i] == -1) {
-					var matrix_x = this.get_matrix_coord_x(i);
-					var matrix_y = this.get_matrix_coord_y(i);
-					
-					var holst_x = this.get_holst_coord(matrix_x);
-					var holst_y = this.get_holst_coord(matrix_y);
-					
-					ctx.drawImage(pic, holst_x, holst_y, size_field, size_field); 
-				}
-		}).bind(this);
-		
+		for (let i = 0; i < fields_values.length; i++) 
+			if (fields_values[i] == -1) {
+				var svg_elem = document.getElementById(i.toString()).childNodes[0];
+				var svg_img = svg_elem.getElementsByTagName('image');
+				
+				var flag_path_elems = svg_elem.getElementsByTagName('path');
+				while (flag_path_elems.length > 0) svg_elem.removeChild(flag_path_elems[0]);
+				
+				svg_img[0].setAttribute('xlink:href', 'assets/img/bomb1_field.png');
+			}
+			
 		setTimeout(this.new_game.bind(this), 3000);
 		this.kill_timer();
 	}
@@ -250,24 +223,16 @@ class View
 		elem.style.display = "block";
 		elem.style.color = "red";
 		
-		var ctx = document.getElementById("canvas_id").getContext("2d");
-		var pic = new Image();
-		pic.src = "assets/img/bomb1_field.png";
-		
-		var size_field = this.size_field;
-		
-		pic.onload = (function() {
-			for (let i = 0; i < fields_values.length; i++) 
-				if (fields_values[i] == -1 && i != id_field) {
-					var matrix_x = this.get_matrix_coord_x(i);
-					var matrix_y = this.get_matrix_coord_y(i);
-					
-					var holst_x = this.get_holst_coord(matrix_x);
-					var holst_y = this.get_holst_coord(matrix_y);
-					
-					ctx.drawImage(pic, holst_x, holst_y, size_field, size_field); 
-				}
-		}).bind(this);
+		for (let i = 0; i < fields_values.length; i++) 
+			if (fields_values[i] == -1 && i != id_field) {
+				var svg_elem = document.getElementById(i.toString()).childNodes[0];
+				var svg_img = svg_elem.getElementsByTagName('image');
+				
+				var flag_path_elems = svg_elem.getElementsByTagName('path');
+				while (flag_path_elems.length > 0) svg_elem.removeChild(flag_path_elems[0]);
+				
+				svg_img[0].setAttribute('xlink:href', 'assets/img/bomb1_field.png');
+			}
 				
 		setTimeout(this.new_game.bind(this), 3000);
 		this.kill_timer();
@@ -318,39 +283,35 @@ class View
     }
 	
 	set_field_click_function(click_field_function1, click_field_function2) {
-        var fields = document.getElementById("canvas_id");
-		
-		if (click_field_function2 != null) fields.onclick = mouse_clicker(click_field_function1, click_field_function2);
-		else fields.onclick = click_field_function1;
-			
-		fields.onselectstart = function(e) { return false; };
-		fields.onmousedown = function(e) { return false; };
+        var fields = document.getElementsByClassName("field");
+        for (let i = 0; i < fields.length; i++) {
+            const element = fields[i];
+			if (click_field_function2 != null) element.onclick = mouse_clicker(click_field_function1, click_field_function2);
+			else element.onclick = click_field_function1;
+			// для отмены выделения текста задаем следующие обработчики у событий onselectstart и onmousedown
+			element.onselectstart = function(e) { return false; };
+			element.onmousedown = function(e) { return false; };
+        }
     }
 	
 	set_field_right_click_function(click_field_function) {
-        var fields = document.getElementById("canvas_id");
-		fields.oncontextmenu = click_field_function;
+        var fields = document.getElementsByClassName("field");
+        for (let i = 0; i < fields.length; i++) {
+            const element = fields[i];
+            element.oncontextmenu = click_field_function;
+        }
     }
 	
 	get_number_clicked_field(event) {
-        var fields = document.getElementById("canvas_id");
-		
-		var x = event.offsetX;
-		var y = event.offsetY;
-		
-		var id = 0;
-		
-		for (let i = 0; i < this.count_row; i++) 
-			for (let j = 0; j < this.count_col; j++) {
-				var holst_y = this.get_holst_coord(i);
-				var holst_x = this.get_holst_coord(j);
-				
-				if (x >= holst_x && x <= holst_x + this.size_field && y >= holst_y && y <= holst_y + this.size_field) {
-					id = (i * 10) + (j + 1);
-					id--;
-					return id;
-				}
-			}
+        var fields = document.getElementsByClassName("field");
+        for (let i = 0; i < fields.length; i++) {
+            const element = fields[i];
+            if (element == event.path[2]) { //0 - элемент внутри svg, по которому произошел клик
+											//1 - элемент svg
+											//2 - нужный элемент div, внутри которого svg
+                return i;
+            }
+        }
     }
 }
 
